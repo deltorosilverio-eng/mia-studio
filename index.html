@@ -420,6 +420,7 @@ function fmtDate(ts){
   return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'})+' '+
          d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
 }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function renderHistory(){
   const h=getHistory();
   const box=document.getElementById('histList');
@@ -427,21 +428,36 @@ function renderHistory(){
   box.innerHTML = h.map(function(it,i){
     const pctTag = it.pct>0 ? '<span class="pill">🔥 '+it.pct+'% OFF</span>' : '';
     const tipo = it.video ? '🎬 Video' : '🖼️ Imagen';
+    function block(titulo,id,texto){
+      if(!texto) return '';
+      return '<div class="out-head"><span>'+titulo+'</span>'+
+             '<button class="copy" onclick="cp(this,\''+id+'\')">Copiar</button></div>'+
+             '<div class="out" id="'+id+'">'+esc(texto)+'</div>';
+    }
+    const det =
+      '<div id="det'+i+'" class="hidden" style="margin-top:10px">'+
+        block('📲 Facebook / Instagram','h'+i+'_fb', it.capFb)+
+        block('🎵 TikTok','h'+i+'_tk', it.capTk)+
+        block('🔖 Hashtags','h'+i+'_tags', it.tags)+
+        block('📸 PROMPT de la FOTO de MIA','h'+i+'_img', it.imgPrompt)+
+        block('🎥 PROMPT del VIDEO','h'+i+'_vid', it.vidPrompt)+
+        block('🗣️ Guión de MIA','h'+i+'_scr', it.script)+
+      '</div>';
     return '<div class="card" style="margin-bottom:10px;background:var(--card2)">'+
-      '<div style="font-weight:700;font-size:15px">'+ (it.name||'Producto') +'</div>'+
+      '<div style="font-weight:700;font-size:15px">'+ esc(it.name||'Producto') +'</div>'+
       '<small class="hint">'+fmtDate(it.t)+' · '+tipo+'</small>'+
       '<div style="margin-top:6px">'+pctTag+
         (it.n? '<span class="pill">💲'+it.n+'</span>':'')+'</div>'+
       '<div style="display:flex;gap:8px;margin-top:10px">'+
-        '<button class="copy" style="flex:1;padding:9px" onclick="reCopy('+i+')">📋 Copiar texto</button>'+
+        '<button class="copy" style="flex:1;padding:9px" onclick="toggleDet('+i+',this)">👁️ Ver todo</button>'+
         '<button class="copy" style="flex:1;padding:9px;background:#5a2a4a" onclick="delHistory('+i+')">🗑️ Borrar</button>'+
-      '</div></div>';
+      '</div>'+ det +'</div>';
   }).join('');
 }
-function reCopy(i){
-  const h=getHistory(); const it=h[i]; if(!it) return;
-  const full=it.capFb+'\n\n'+it.tags;
-  navigator.clipboard.writeText(full).then(()=>{ alert('✅ Texto copiado. Pégalo en Facebook o Instagram.'); });
+function toggleDet(i,btn){
+  const d=document.getElementById('det'+i);
+  const open=d.classList.toggle('hidden');
+  btn.textContent = open ? '👁️ Ver todo' : '🙈 Ocultar';
 }
 function delHistory(i){
   const h=getHistory(); h.splice(i,1);
