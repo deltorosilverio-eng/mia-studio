@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MIA Studio - Generador de Ofertas</title>
+<style>
+  :root{
+    --bg:#0f1020; --card:#1b1c34; --card2:#23254a; --txt:#f3f3fb;
+    --muted:#9aa0c3; --accent:#ff5ca8; --accent2:#7c5cff; --ok:#27c08a;
+    --line:#34365f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;
+       background:linear-gradient(160deg,#0f1020,#191a35);color:var(--txt);
+       padding:14px;padding-bottom:60px}
+  header{text-align:center;margin-bottom:14px}
+  header h1{margin:0;font-size:24px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+            -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+  header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+        padding:14px;margin-bottom:14px}
+  .card h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px}
+  label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+  input,select,textarea{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);
+        background:var(--card2);color:var(--txt);font-size:15px;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent2)}
+  textarea{resize:vertical;min-height:60px}
+  .row{display:flex;gap:10px}
+  .row > div{flex:1}
+  button{cursor:pointer;border:none;font-weight:700;font-size:15px}
+  .btn-main{width:100%;padding:14px;border-radius:12px;color:#fff;margin-top:14px;
+        background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .btn-main:active{transform:scale(.99)}
+  .pill{display:inline-block;background:var(--card2);border:1px solid var(--line);
+        border-radius:20px;padding:5px 12px;font-size:13px;margin:3px 4px 3px 0;color:var(--muted)}
+  .out{background:var(--card2);border:1px solid var(--line);border-radius:12px;
+        padding:12px;margin-bottom:10px;white-space:pre-wrap;font-size:14px;line-height:1.5}
+  .out-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .out-head span{font-size:13px;color:var(--muted);font-weight:700}
+  .copy{background:var(--accent2);color:#fff;border-radius:8px;padding:6px 12px;font-size:12px}
+  .copy.done{background:var(--ok)}
+  .badge{display:inline-block;padding:6px 12px;border-radius:10px;font-weight:700;font-size:14px}
+  .badge.video{background:rgba(255,92,168,.15);color:var(--accent);border:1px solid var(--accent)}
+  .badge.simple{background:rgba(124,92,255,.15);color:#a78bfa;border:1px solid var(--accent2)}
+  .save-note{font-size:12px;color:var(--ok);margin-top:6px}
+  .hidden{display:none}
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  .tab{flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--card);
+        border:1px solid var(--line);color:var(--muted);font-weight:700;font-size:13px}
+  .tab.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+  small.hint{color:var(--muted);font-size:11px;display:block;margin-top:3px}
+  .disc{font-size:13px;color:var(--ok);font-weight:700;margin-top:4px;min-height:16px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>✨ MIA Studio</h1>
+  <p>Prepara tus ofertas y publica en 1 clic</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" id="tabGen" onclick="showTab('gen')">📝 Crear publicación</div>
+  <div class="tab" id="tabConf" onclick="showTab('conf')">⚙️ Mis datos</div>
+</div>
+
+<!-- ============ CONFIG ============ -->
+<div id="panelConf" class="hidden">
+  <div class="card">
+    <h2>⚙️ Tus datos de afiliado</h2>
+    <small class="hint">Se guardan solo en tu celular. Los pones una vez.</small>
+    <label>Tu nombre / tienda (para la firma)</label>
+    <input id="cfgName" placeholder="Ej: Ofertas MIA" />
+    <label>Tu ID de afiliado de Mercado Libre (opcional)</label>
+    <input id="cfgML" placeholder="Ej: tu_id_ML" />
+    <label>Tu ID/tag de afiliado de AliExpress (opcional)</label>
+    <input id="cfgAE" placeholder="Ej: tu_tracking_id" />
+    <button class="btn-main" onclick="saveConfig()">💾 Guardar mis datos</button>
+    <div id="cfgSaved" class="save-note hidden">✅ Guardado</div>
+  </div>
+</div>
+
+<!-- ============ GENERADOR ============ -->
+<div id="panelGen">
+  <div class="card">
+    <h2>🛍️ Datos de la oferta</h2>
+
+    <label>Tipo de producto</label>
+    <select id="cat">
+      <option value="general">📦 General (de todo)</option>
+      <option value="limpieza">🧽 Artículos de limpieza</option>
+      <option value="herramientas">🔧 Herramientas de trabajo</option>
+      <option value="maquillaje">💄 Maquillaje</option>
+      <option value="juguetes">🧸 Juguetes</option>
+      <option value="telefonos">📱 Teléfonos / tecnología</option>
+    </select>
+
+    <label>Nombre del producto</label>
+    <input id="pName" placeholder="Ej: Set de brochas de maquillaje 12 piezas" />
+
+    <div class="row">
+      <div>
+        <label>Precio normal</label>
+        <input id="pOld" type="number" inputmode="decimal" placeholder="500" />
+      </div>
+      <div>
+        <label>Precio oferta</label>
+        <input id="pNew" type="number" inputmode="decimal" placeholder="299" />
+      </div>
+    </div>
+    <div class="disc" id="discTxt"></div>
+
+    <label>Dónde se vende</label>
+    <select id="store">
+      <option value="ml">Mercado Libre</option>
+      <option value="ae">AliExpress</option>
+      <option value="fisico">Físico (en mano / local)</option>
+    </select>
+
+    <label>Link del producto (tu link de afiliado ya generado)</label>
+    <input id="pLink" placeholder="Pega aquí tu link de afiliado" />
+    <small class="hint">Genera el link en tu app de afiliados y pégalo aquí. Si es físico, déjalo vacío.</small>
+
+    <label>Lugar / escena</label>
+    <select id="scene">
+      <option value="auto">🤖 Que MIA elija segun la oferta</option>
+      <option value="sala">🛋️ Sala</option>
+      <option value="cocina">🍳 Cocina</option>
+      <option value="bano">🚿 Baño</option>
+      <option value="cuarto">🛏️ Cuarto / recámara</option>
+      <option value="tocador">💄 Tocador (maquillaje)</option>
+      <option value="ninos">🧸 Cuarto de niños</option>
+      <option value="taller">🔧 Taller / garage</option>
+      <option value="escaleras">🪜 Escaleras</option>
+      <option value="tienda">🏬 Tienda</option>
+      <option value="calle">🌆 Calle / urbano</option>
+      <option value="gym">🏋️ Gimnasio</option>
+    </select>
+
+    <label>¿Quieres video de MIA?</label>
+    <select id="useVideo">
+      <option value="auto">Que MIA decida por mí</option>
+      <option value="si">Sí, con video de MIA</option>
+      <option value="no">No, solo la oferta</option>
+    </select>
+
+    <button class="btn-main" onclick="generate()">✨ Generar publicación</button>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div id="results" class="hidden">
+
+    <div class="card">
+      <h2>🎯 Recomendación</h2>
+      <div id="recoBadge"></div>
+      <p id="recoWhy" style="color:var(--muted);font-size:13px;margin:8px 0 0"></p>
+    </div>
+
+    <div class="card">
+      <h2>📲 Texto para publicar</h2>
+      <div class="out-head"><span>Facebook / Instagram</span><button class="copy" onclick="cp(this,'capFb')">Copiar</button></div>
+      <div class="out" id="capFb"></div>
+
+      <div class="out-head"><span>TikTok (cortito)</span><button class="copy" onclick="cp(this,'capTk')">Copiar</button></div>
+      <div class="out" id="capTk"></div>
+
+      <div class="out-head"><span>Hashtags</span><button class="copy" onclick="cp(this,'tags')">Copiar</button></div>
+      <div class="out" id="tags"></div>
+    </div>
+
+    <div id="miaCard" class="card">
+      <h2>🎬 Contenido de MIA</h2>
+      <div class="out-head"><span>Prompt para la FOTO de MIA (Gemini/Picsart)</span><button class="copy" onclick="cp(this,'imgPrompt')">Copiar</button></div>
+      <div class="out" id="imgPrompt"></div>
+
+      <div class="out-head"><span>Prompt para el VIDEO de MIA (Seedance)</span><button class="copy" onclick="cp(this,'vidPrompt')">Copiar</button></div>
+      <div class="out" id="vidPrompt"></div>
+
+      <div class="out-head"><span>Lo que MIA debe DECIR en el video</span><button class="copy" onclick="cp(this,'script')">Copiar</button></div>
+      <div class="out" id="script"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ---------- Guardar / cargar datos ----------
+function loadConfig(){
+  document.getElementById('cfgName').value = localStorage.getItem('m_name')||'';
+  document.getElementById('cfgML').value   = localStorage.getItem('m_ml')||'';
+  document.getElementById('cfgAE').value   = localStorage.getItem('m_ae')||'';
+}
+function saveConfig(){
+  localStorage.setItem('m_name', document.getElementById('cfgName').value.trim());
+  localStorage.setItem('m_ml',   document.getElementById('cfgML').value.trim());
+  localStorage.setItem('m_ae',   document.getElementById('cfgAE').value.trim());
+  const s=document.getElementById('cfgSaved'); s.classList.remove('hidden');
+  setTimeout(()=>s.classList.add('hidden'),1800);
+}
+function showTab(t){
+  document.getElementById('panelGen').classList.toggle('hidden', t!=='gen');
+  document.getElementById('panelConf').classList.toggle('hidden', t!=='conf');
+  document.getElementById('tabGen').classList.toggle('active', t==='gen');
+  document.getElementById('tabConf').classList.toggle('active', t==='conf');
+}
+
+// ---------- Descuento en vivo ----------
+function calcDisc(){
+  const o=parseFloat(document.getElementById('pOld').value);
+  const n=parseFloat(document.getElementById('pNew').value);
+  const el=document.getElementById('discTxt');
+  if(o>0 && n>0 && n<o){
+    const pct=Math.round((1-n/o)*100);
+    el.textContent='🔥 '+pct+'% de descuento  ·  ahorras '+(o-n).toFixed(0);
+    return pct;
+  }
+  el.textContent=''; return 0;
+}
+document.getElementById('pOld').addEventListener('input',calcDisc);
+document.getElementById('pNew').addEventListener('input',calcDisc);
+
+// ---------- Textos por categoría ----------
+const HOOKS={
+  general:["🛒 ¡Oferta del día!","🤑 No te lo pierdas","⚡ Súper precio por hoy","🎁 Hallazgo del día"],
+  limpieza:["🧽 ¡Tu casa brillará!","✨ Limpieza fácil y barata","🫧 Adiós a la mugre"],
+  herramientas:["🔧 Para el trabajo rudo","🛠️ Calidad a buen precio","💪 La herramienta que faltaba"],
+  maquillaje:["💄 Glow al instante","💅 Belleza a buen precio","✨ Tu look perfecto"],
+  juguetes:["🧸 La sonrisa de tus niños","🎉 Diversión asegurada","🎁 Regalo ideal"],
+  telefonos:["📱 Tecnología en oferta","⚡ Potencia a buen precio","🔥 Upgrade ya"]
+};
+const TAGS={
+  general:"#ofertas #descuentos #promociones #ahorra #comprasonline #chollos",
+  limpieza:"#limpieza #hogar #ofertas #casalimpia #organizacion #amazon",
+  herramientas:"#herramientas #bricolaje #trabajo #ferreteria #ofertas #diy",
+  maquillaje:"#maquillaje #makeup #belleza #beauty #cosmeticos #ofertas",
+  juguetes:"#juguetes #niños #regalos #kids #diversion #ofertas",
+  telefonos:"#tecnologia #celulares #gadgets #smartphone #tech #ofertas"
+};
+// Acción con el producto (según categoría)
+const ACTION={
+  general:"holding and showing the product to the camera",
+  limpieza:"showing the cleaning product with a big happy smile",
+  herramientas:"holding the work tool confidently",
+  maquillaje:"showing and applying the makeup product",
+  juguetes:"showing the toy with an excited joyful expression",
+  telefonos:"holding the phone/gadget showing the screen to the camera"
+};
+// Lugar / escena -- "LA CASA DE MIA" (descripciones FIJAS y detalladas para consistencia)
+const ROOMS={
+  sala:"in MIA's living room: light gray fabric sofa with mustard yellow cushions, round wooden coffee table, large window with white curtains on the left, a tall green potted plant in the corner, beige rug, white brick accent wall",
+  cocina:"in MIA's kitchen: white cabinets with light wood countertop, mint-green tile backsplash, stainless steel fridge on the right, a small kitchen island with two wooden stools, a window above the sink",
+  bano:"in MIA's bathroom: white subway tile walls, a large round mirror with thin gold frame, white vanity with white marble top, a small green plant, warm light",
+  cuarto:"in MIA's bedroom: warm beige walls, a bed with mustard yellow bedding, a white wardrobe closet with mirror doors on the right, light wood floor, large window with sheer white curtains",
+  tocador:"at MIA's vanity: a white dresser with a large round mirror framed with warm light bulbs, gold details, makeup neatly arranged, beige wall behind",
+  ninos:"in a colorful kids playroom in MIA's house: soft blue walls, a wooden toy shelf, a striped rug, plush toys",
+  taller:"in MIA's garage workshop: gray concrete wall with a pegboard of tools, a sturdy wooden workbench, good lighting",
+  escaleras:"on the wooden staircase of MIA's house: light wood steps, white railing, a green plant at the bottom, warm light",
+  tienda:"in a modern retail store",
+  calle:"on a stylish city street with an urban background",
+  gym:"in a modern gym"
+};
+// Escena automática por categoría
+const AUTO_ROOM={
+  general:"sala", limpieza:"cocina", herramientas:"taller",
+  maquillaje:"tocador", juguetes:"ninos", telefonos:"sala"
+};
+// Vestuarios (rotan para que MIA no se vea repetitiva)
+const WARDROBE=[
+  "wearing a black sports bra and high-waist leggings with white sneakers",
+  "wearing an oversized graphic hoodie and bike shorts",
+  "wearing a cropped white tank top, oversized denim jacket and cargo pants",
+  "wearing a fitted athletic dress and sneakers",
+  "wearing a colorful matching workout set (top and leggings)",
+  "wearing a casual white t-shirt and ripped jeans with sneakers",
+  "wearing a sporty zip-up jacket and leggings",
+  "wearing a crop top and joggers, urban streetwear style"
+];
+const MOVE={
+  general:"she smiles, points at the product and gives a thumbs up",
+  limpieza:"she shows the cleaning result and smiles happily",
+  herramientas:"she holds up the tool confidently and nods",
+  maquillaje:"she applies/shows the makeup and winks at the camera",
+  juguetes:"she shows the toy moving and laughs with joy",
+  telefonos:"she shows the phone screen and points at the camera"
+};
+
+const FACE="A photorealistic 25-year-old black woman named MIA, dark smooth glowing skin, radiant complexion, very large striking expressive honey-amber eyes, full lips, long dark curly hair in a high ponytail, athletic fit body. Friendly confident smile. SAME consistent face every time (use reference photo). 8k, soft warm professional lighting, realistic photography.";
+
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function moneyLine(o,n){
+  if(o>0&&n>0&&n<o) return "💰 Antes: "+o+"  ➡️  AHORA: "+n;
+  if(n>0) return "💰 Precio: "+n;
+  return "";
+}
+
+function generate(){
+  const cat=document.getElementById('cat').value;
+  const name=(document.getElementById('pName').value||'este producto').trim();
+  const o=parseFloat(document.getElementById('pOld').value)||0;
+  const n=parseFloat(document.getElementById('pNew').value)||0;
+  const store=document.getElementById('store').value;
+  const link=document.getElementById('pLink').value.trim();
+  const useVideo=document.getElementById('useVideo').value;
+  const pct=calcDisc();
+  const myName=localStorage.getItem('m_name')||'';
+
+  // ---- Recomendación video vs simple ----
+  let video;
+  if(useVideo==='si') video=true;
+  else if(useVideo==='no') video=false;
+  else video = (pct>=30) || cat==='maquillaje' || cat==='juguetes' || cat==='telefonos';
+
+  const badge=document.getElementById('recoBadge');
+  const why=document.getElementById('recoWhy');
+  if(video){
+    badge.innerHTML='<span class="badge video">🎬 Publica con VIDEO de MIA</span>';
+    why.textContent='Este producto luce mejor mostrándose. Un video de MIA llama más la atención y vende más.';
+  }else{
+    badge.innerHTML='<span class="badge simple">🖼️ Publica solo la OFERTA (imagen)</span>';
+    why.textContent='Para esta oferta basta una buena imagen con el precio y tu link. Rápido y directo.';
+  }
+
+  // ---- Link / CTA ----
+  let cta;
+  if(store==='fisico') cta="📍 Disponible en mano. Escríbeme por interno para apartarlo.";
+  else if(link) cta="👉 Compra aquí: "+link;
+  else cta="👉 Escríbeme \"INFO\" y te paso el link 😉";
+
+  const hook=pick(HOOKS[cat]||HOOKS.general);
+  const money=moneyLine(o,n);
+  const pctTxt = pct>0 ? "🔥 "+pct+"% OFF\n" : "";
+  const firma = myName ? "\n\n— "+myName : "";
+
+  // ---- Caption Facebook/IG ----
+  const capFb=
+`${hook}
+
+${name}
+${pctTxt}${money}
+
+${cta}
+
+¡Aprovecha antes de que se acabe! ⏰${firma}`;
+
+  // ---- Caption TikTok ----
+  const capTk=
+`${hook} ${name} 😍 ${pct>0?('-'+pct+'% '):''}${cta}`;
+
+  // ---- Hashtags ----
+  const tags=(TAGS[cat]||TAGS.general)+" #MIA #oferta";
+
+  // ---- Prompts MIA ----
+  const sceneSel=document.getElementById('scene').value;
+  const roomKey = sceneSel==='auto' ? (AUTO_ROOM[cat]||'sala') : sceneSel;
+  const room = ROOMS[roomKey]||ROOMS.sala;
+  const outfit = pick(WARDROBE);
+  const action = ACTION[cat]||ACTION.general;
+  const imgPrompt=FACE+"\n"+outfit+", "+room+", "+action+". The product is: "+name+".";
+  const vidPrompt="image-to-video desde la foto de MIA (misma cara). Movimiento: "+(MOVE[cat]||MOVE.general)+". Cámara fija, 5-8 segundos, realista.";
+  const script=`"¡Hola! Mira esta oferta de ${name}${pct>0?' con '+pct+'% de descuento':''}. ${store==='fisico'?'Escríbeme para apartarlo':'Te dejo el link abajo'}. ¡Corre que se agota!"`;
+
+  // ---- Pintar ----
+  document.getElementById('capFb').textContent=capFb;
+  document.getElementById('capTk').textContent=capTk;
+  document.getElementById('tags').textContent=tags;
+  document.getElementById('imgPrompt').textContent=imgPrompt;
+  document.getElementById('vidPrompt').textContent=vidPrompt;
+  document.getElementById('script').textContent=script;
+
+  // Mostrar/ocultar tarjeta de MIA según recomendación
+  document.getElementById('miaCard').style.display = video ? 'block':'none';
+
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('results').scrollIntoView({behavior:'smooth'});
+}
+
+// ---------- Copiar ----------
+function cp(btn,id){
+  const txt=document.getElementById(id).textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    btn.textContent='✅ Copiado'; btn.classList.add('done');
+    setTimeout(()=>{btn.textContent='Copiar'; btn.classList.remove('done');},1500);
+  });
+}
+
+loadConfig();
+</script>
+</body>
+</html>
