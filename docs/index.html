@@ -61,7 +61,8 @@
 </header>
 
 <div class="tabs">
-  <div class="tab active" id="tabGen" onclick="showTab('gen')">📝 Crear publicación</div>
+  <div class="tab active" id="tabGen" onclick="showTab('gen')">📝 Crear</div>
+  <div class="tab" id="tabHist" onclick="showTab('hist')">📜 Historial</div>
   <div class="tab" id="tabConf" onclick="showTab('conf')">⚙️ Mis datos</div>
 </div>
 
@@ -78,6 +79,16 @@
     <input id="cfgAE" placeholder="Ej: tu_tracking_id" />
     <button class="btn-main" onclick="saveConfig()">💾 Guardar mis datos</button>
     <div id="cfgSaved" class="save-note hidden">✅ Guardado</div>
+  </div>
+</div>
+
+<!-- ============ HISTORIAL ============ -->
+<div id="panelHist" class="hidden">
+  <div class="card">
+    <h2>📜 Historial de publicaciones</h2>
+    <small class="hint">Se guarda solo en tu celular. Aquí ves todo lo que has creado.</small>
+    <div id="histList" style="margin-top:10px"></div>
+    <button class="btn-main" style="background:#5a2a4a" onclick="clearHistory()">🗑️ Borrar todo el historial</button>
   </div>
 </div>
 
@@ -201,8 +212,11 @@ function saveConfig(){
 function showTab(t){
   document.getElementById('panelGen').classList.toggle('hidden', t!=='gen');
   document.getElementById('panelConf').classList.toggle('hidden', t!=='conf');
+  document.getElementById('panelHist').classList.toggle('hidden', t!=='hist');
   document.getElementById('tabGen').classList.toggle('active', t==='gen');
   document.getElementById('tabConf').classList.toggle('active', t==='conf');
+  document.getElementById('tabHist').classList.toggle('active', t==='hist');
+  if(t==='hist') renderHistory();
 }
 
 // ---------- Descuento en vivo ----------
@@ -371,6 +385,13 @@ ${cta}
   // Mostrar/ocultar tarjeta de MIA según recomendación
   document.getElementById('miaCard').style.display = video ? 'block':'none';
 
+  // ---- Guardar en historial ----
+  saveToHistory({
+    t: Date.now(), name:name, cat:cat, o:o, n:n, pct:pct, store:store, link:link,
+    video:video, capFb:capFb, capTk:capTk, tags:tags,
+    imgPrompt:imgPrompt, vidPrompt:vidPrompt, script:script
+  });
+
   document.getElementById('results').classList.remove('hidden');
   document.getElementById('results').scrollIntoView({behavior:'smooth'});
 }
@@ -382,6 +403,55 @@ function cp(btn,id){
     btn.textContent='✅ Copiado'; btn.classList.add('done');
     setTimeout(()=>{btn.textContent='Copiar'; btn.classList.remove('done');},1500);
   });
+}
+
+// ---------- Historial ----------
+function getHistory(){
+  try{ return JSON.parse(localStorage.getItem('m_history')||'[]'); }catch(e){ return []; }
+}
+function saveToHistory(item){
+  const h=getHistory();
+  h.unshift(item);              // el más nuevo arriba
+  if(h.length>100) h.pop();     // máximo 100 guardados
+  localStorage.setItem('m_history', JSON.stringify(h));
+}
+function fmtDate(ts){
+  const d=new Date(ts);
+  return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'})+' '+
+         d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+}
+function renderHistory(){
+  const h=getHistory();
+  const box=document.getElementById('histList');
+  if(h.length===0){ box.innerHTML='<p style="color:var(--muted);font-size:14px">Aún no has creado publicaciones. ¡Crea la primera en la pestaña 📝 Crear!</p>'; return; }
+  box.innerHTML = h.map(function(it,i){
+    const pctTag = it.pct>0 ? '<span class="pill">🔥 '+it.pct+'% OFF</span>' : '';
+    const tipo = it.video ? '🎬 Video' : '🖼️ Imagen';
+    return '<div class="card" style="margin-bottom:10px;background:var(--card2)">'+
+      '<div style="font-weight:700;font-size:15px">'+ (it.name||'Producto') +'</div>'+
+      '<small class="hint">'+fmtDate(it.t)+' · '+tipo+'</small>'+
+      '<div style="margin-top:6px">'+pctTag+
+        (it.n? '<span class="pill">💲'+it.n+'</span>':'')+'</div>'+
+      '<div style="display:flex;gap:8px;margin-top:10px">'+
+        '<button class="copy" style="flex:1;padding:9px" onclick="reCopy('+i+')">📋 Copiar texto</button>'+
+        '<button class="copy" style="flex:1;padding:9px;background:#5a2a4a" onclick="delHistory('+i+')">🗑️ Borrar</button>'+
+      '</div></div>';
+  }).join('');
+}
+function reCopy(i){
+  const h=getHistory(); const it=h[i]; if(!it) return;
+  const full=it.capFb+'\n\n'+it.tags;
+  navigator.clipboard.writeText(full).then(()=>{ alert('✅ Texto copiado. Pégalo en Facebook o Instagram.'); });
+}
+function delHistory(i){
+  const h=getHistory(); h.splice(i,1);
+  localStorage.setItem('m_history', JSON.stringify(h));
+  renderHistory();
+}
+function clearHistory(){
+  if(confirm('¿Seguro que quieres borrar TODO el historial? No se puede deshacer.')){
+    localStorage.removeItem('m_history'); renderHistory();
+  }
 }
 
 loadConfig();
