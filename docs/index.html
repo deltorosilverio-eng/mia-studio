@@ -62,8 +62,9 @@
 
 <div class="tabs">
   <div class="tab active" id="tabGen" onclick="showTab('gen')">📝 Crear</div>
+  <div class="tab" id="tabPlace" onclick="showTab('place')">📸 Lugar</div>
   <div class="tab" id="tabHist" onclick="showTab('hist')">📜 Historial</div>
-  <div class="tab" id="tabConf" onclick="showTab('conf')">⚙️ Mis datos</div>
+  <div class="tab" id="tabConf" onclick="showTab('conf')">⚙️ Datos</div>
 </div>
 
 <!-- ============ CONFIG ============ -->
@@ -89,6 +90,64 @@
     <small class="hint">Se guarda solo en tu celular. Aquí ves todo lo que has creado.</small>
     <div id="histList" style="margin-top:10px"></div>
     <button class="btn-main" style="background:#5a2a4a" onclick="clearHistory()">🗑️ Borrar todo el historial</button>
+  </div>
+</div>
+
+<!-- ============ LUGAR REAL ============ -->
+<div id="panelPlace" class="hidden">
+  <div class="card">
+    <h2>📸 MIA en un lugar real</h2>
+    <small class="hint">Sube una foto real (un parque, café, calle...) y te doy el prompt para meter a MIA ahí, como si ella hubiera estado.</small>
+
+    <label>Tu foto del lugar (opcional, para verla aquí)</label>
+    <input type="file" accept="image/*" id="plPhoto" onchange="previewPlace()" />
+    <img id="plPreview" style="display:none;width:100%;border-radius:12px;margin-top:8px" />
+
+    <label>Describe el lugar (en español, simple)</label>
+    <input id="plDesc" placeholder="Ej: un parque con árboles y una fuente" />
+
+    <label>Tipo de toma</label>
+    <select id="plType">
+      <option value="selfie">🤳 Selfie (ella se toma la foto)</option>
+      <option value="full">🧍 Foto de cuerpo completo</option>
+      <option value="medio">📷 Foto media (de la cintura para arriba)</option>
+    </select>
+
+    <label>Momento del día</label>
+    <select id="plTime">
+      <option value="dia">☀️ De día</option>
+      <option value="atardecer">🌅 Atardecer</option>
+      <option value="noche">🌙 De noche</option>
+    </select>
+
+    <label>¿Quieres también prompt de VIDEO?</label>
+    <select id="plVideo">
+      <option value="no">No, solo foto</option>
+      <option value="si">Sí, foto + video</option>
+    </select>
+
+    <button class="btn-main" onclick="generatePlace()">✨ Generar prompt</button>
+  </div>
+
+  <div id="placeResults" class="hidden">
+    <div class="card">
+      <h2>📋 Tu contenido (lugar real)</h2>
+      <small class="hint">Recuerda: en Picsart/Gemini sube TU foto del lugar + la FOTO MADRE de MIA, y pega este prompt.</small>
+
+      <div class="out-head" style="margin-top:10px"><span>📸 PROMPT de la FOTO</span><button class="copy" onclick="cp(this,'plImgOut')">Copiar</button></div>
+      <div class="out" id="plImgOut"></div>
+
+      <div id="plVidWrap" style="display:none">
+        <div class="out-head"><span>🎥 PROMPT del VIDEO</span><button class="copy" onclick="cp(this,'plVidOut')">Copiar</button></div>
+        <div class="out" id="plVidOut"></div>
+      </div>
+
+      <div class="out-head"><span>✍️ Texto para el post</span><button class="copy" onclick="cp(this,'plCapOut')">Copiar</button></div>
+      <div class="out" id="plCapOut"></div>
+
+      <div class="out-head"><span>🔖 Hashtags</span><button class="copy" onclick="cp(this,'plTagOut')">Copiar</button></div>
+      <div class="out" id="plTagOut"></div>
+    </div>
   </div>
 </div>
 
@@ -213,9 +272,11 @@ function showTab(t){
   document.getElementById('panelGen').classList.toggle('hidden', t!=='gen');
   document.getElementById('panelConf').classList.toggle('hidden', t!=='conf');
   document.getElementById('panelHist').classList.toggle('hidden', t!=='hist');
+  document.getElementById('panelPlace').classList.toggle('hidden', t!=='place');
   document.getElementById('tabGen').classList.toggle('active', t==='gen');
   document.getElementById('tabConf').classList.toggle('active', t==='conf');
   document.getElementById('tabHist').classList.toggle('active', t==='hist');
+  document.getElementById('tabPlace').classList.toggle('active', t==='place');
   if(t==='hist') renderHistory();
 }
 
@@ -468,6 +529,67 @@ function clearHistory(){
   if(confirm('¿Seguro que quieres borrar TODO el historial? No se puede deshacer.')){
     localStorage.removeItem('m_history'); renderHistory();
   }
+}
+
+// ---------- Lugar real ----------
+function previewPlace(){
+  const f=document.getElementById('plPhoto').files[0];
+  const img=document.getElementById('plPreview');
+  if(!f){ img.style.display='none'; return; }
+  const r=new FileReader();
+  r.onload=function(e){ img.src=e.target.result; img.style.display='block'; };
+  r.readAsDataURL(f);
+}
+const PL_TIME={
+  dia:"during the day with bright natural sunlight",
+  atardecer:"at sunset with warm golden light",
+  noche:"at night with city lights and soft ambient glow"
+};
+const PL_SHOT={
+  selfie:"She is taking a selfie holding a phone with her arm extended, looking at the camera and smiling",
+  full:"Full body shot, she is posing naturally and smiling",
+  medio:"Half body shot (from the waist up), posing naturally and smiling"
+};
+const PL_CAPS=[
+  "🌿 Disfrutando el día ✨",
+  "📍 Un ratito para mí 💕",
+  "✨ Buenos momentos, mejores vibras",
+  "🤍 Aprovechando la tarde",
+  "😎 Día de salir un rato"
+];
+function generatePlace(){
+  const desc=(document.getElementById('plDesc').value||'this real place').trim();
+  const type=document.getElementById('plType').value;
+  const time=document.getElementById('plTime').value;
+  const wantVid=document.getElementById('plVideo').value==='si';
+  const outfit=pick(WARDROBE);
+
+  const imgPrompt=
+    "Use the face of MIA from the reference photo (same face: dark glowing skin, very large honey-amber eyes, long dark curly hair in a high ponytail). "+
+    "Place her naturally into the uploaded real background photo of: "+desc+". "+
+    PL_SHOT[type]+", "+outfit+", "+PL_TIME[time]+". "+
+    "Match the real photo's perspective, lighting and realistic shadows so it looks like a genuine photo taken there. Photorealistic, high detail, natural look.";
+
+  const vidPrompt="image-to-video desde la imagen ya creada de MIA en el lugar (misma cara). Movimiento: ella sonríe, mueve un poco la cabeza y saluda con la mano. Cámara natural tipo celular, 5-8 segundos, realista.";
+
+  const cap=pick(PL_CAPS);
+  const tags="#lifestyle #influencer #vibes #ootd #dayinmylife #MIA";
+
+  document.getElementById('plImgOut').textContent=imgPrompt;
+  document.getElementById('plVidOut').textContent=vidPrompt;
+  document.getElementById('plCapOut').textContent=cap;
+  document.getElementById('plTagOut').textContent=tags;
+  document.getElementById('plVidWrap').style.display = wantVid ? 'block':'none';
+
+  // Guardar en historial
+  saveToHistory({
+    t:Date.now(), name:'📸 Lugar: '+desc, cat:'lugar', o:0, n:0, pct:0,
+    store:'', link:'', video:wantVid, capFb:cap, capTk:cap, tags:tags,
+    imgPrompt:imgPrompt, vidPrompt:(wantVid?vidPrompt:''), script:''
+  });
+
+  document.getElementById('placeResults').classList.remove('hidden');
+  document.getElementById('placeResults').scrollIntoView({behavior:'smooth'});
 }
 
 loadConfig();
